@@ -8,13 +8,17 @@ import (
 
 func main() {
 
-	regExp := `a|b`
-	str := "c"
-
+	regExp := `(あ|い)*うえ*(お|)`
 	r := regexp.NewRegexp(regExp)
+
+	str := "あうえ"
 	if r.Match(str) {
-		fmt.Printf("%v is match to %v\n", str, regExp)
+		fmt.Printf("%v match to %v\n", str, regExp)
 	} else {
-		fmt.Printf("%v is not match to %v\n", str, regExp)
+		fmt.Printf("%v does not match to %v\n", str, regExp)
 	}
+
+	rs := regexp.NewRandString(regExp)
+
+	fmt.Printf(rs.Generate())
 }

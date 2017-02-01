@@ -2,7 +2,9 @@ package regexp
 
 import (
 	"errors"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/deckarep/golang-set"
 )
@@ -340,10 +342,15 @@ func (f nfaFragment) build() nondeterministicFiniteAutomaton {
 
 type node interface {
 	assemble(*context) nfaFragment
+	RandomString() string
 }
 
 type character struct {
 	char string
+}
+
+func (c character) RandomString() string {
+	return c.char
 }
 
 func (c character) assemble(context *context) nfaFragment {
@@ -369,6 +376,15 @@ type union struct {
 	operand2 node
 }
 
+func (u union) RandomString() string {
+	rand.Seed(time.Now().UnixNano())
+	if rand.Int()%2 == 1 {
+		return u.operand1.RandomString()
+	} else {
+		return u.operand2.RandomString()
+	}
+}
+
 func (u union) assemble(context *context) nfaFragment {
 	frag1 := u.operand1.assemble(context)
 	frag2 := u.operand2.assemble(context)
@@ -386,6 +402,16 @@ func (u union) assemble(context *context) nfaFragment {
 
 type star struct {
 	operand node
+}
+
+func (s star) RandomString() string {
+	rand.Seed(time.Now().UnixNano())
+	repeat := rand.Intn(10)
+	str := ""
+	for i := 0; i <= repeat; i++ {
+		str = strings.Join([]string{str, s.operand.RandomString()}, "")
+	}
+	return str
 }
 
 func (s star) assemble(context *context) nfaFragment {
@@ -412,6 +438,10 @@ func (s star) assemble(context *context) nfaFragment {
 type concat struct {
 	operand1 node
 	operand2 node
+}
+
+func (c concat) RandomString() string {
+	return strings.Join([]string{c.operand1.RandomString(), c.operand2.RandomString()}, "")
 }
 
 func (c concat) assemble(context *context) nfaFragment {
@@ -466,4 +496,43 @@ func NewRegexp(regexpString string) Regexp {
 	r.compile()
 
 	return r
+}
+
+type RandString interface {
+	Generate() string
+}
+
+type randString struct {
+	node node
+}
+
+func (r randString) Generate() string {
+	return r.node.RandomString()
+}
+
+func (r *regexp) getNode() node {
+	lexer := lexer{
+		stringArray: strings.Split(r.regexp, ""),
+		index:       0,
+	}
+	parser := parser{
+		lexer: lexer,
+	}
+	parser.move()
+
+	node := parser.subexpr()
+
+	return node
+}
+
+func NewRandString(regexpString string) RandString {
+	r := regexp{
+		regexp: regexpString,
+	}
+
+	rs := randString{
+		node: r.getNode(),
+	}
+
+	return rs
 }
