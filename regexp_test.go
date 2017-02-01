@@ -413,11 +413,6 @@ func TestRegexp(t *testing.T) {
 			failCase:    []string{"b", "ab"},
 		},
 		suite{
-			regexp:      `a*`,
-			successCase: []string{"", "a", "aa", "aaa"},
-			failCase:    []string{"b", "ab"},
-		},
-		suite{
 			regexp:      `a\|b`,
 			successCase: []string{"a|b"},
 			failCase:    []string{"a", "b"},
