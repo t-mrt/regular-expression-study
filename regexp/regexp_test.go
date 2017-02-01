@@ -23,7 +23,7 @@ func TestNondeterministicFiniteAutomaton(t *testing.T) {
 		return mapset.NewSet()
 	}
 
-	nfa := NondeterministicFiniteAutomaton{
+	nfa := nondeterministicFiniteAutomaton{
 		transition: transition,
 		start:      0,
 		accepts:    accepts,
@@ -94,7 +94,7 @@ func TestDeterministicFiniteAutomaton(t *testing.T) {
 		return mapset.NewSet()
 	}
 
-	dfa := DeterministicFiniteAutomaton{
+	dfa := deterministicFiniteAutomaton{
 		transition: transition,
 		start:      mapset.NewSetFromSlice([]interface{}{0}),
 		accepts:    accepts,
@@ -125,7 +125,7 @@ func TestDeterministicFiniteAutomaton(t *testing.T) {
 	}
 }
 
-func TestNfa2dfa(t *testing.T) {
+func TestNFA2dfa(t *testing.T) {
 	accepts := mapset.NewSetFromSlice([]interface{}{2})
 
 	transition := func(state int, char string) mapset.Set {
@@ -141,7 +141,7 @@ func TestNfa2dfa(t *testing.T) {
 		return mapset.NewSet()
 	}
 
-	nfa := NondeterministicFiniteAutomaton{
+	nfa := nondeterministicFiniteAutomaton{
 		transition: transition,
 		start:      0,
 		accepts:    accepts,
@@ -191,7 +191,7 @@ func TestDFARuntime(t *testing.T) {
 		return mapset.NewSet()
 	}
 
-	nfa := NondeterministicFiniteAutomaton{
+	nfa := nondeterministicFiniteAutomaton{
 		transition: transition,
 		start:      0,
 		accepts:    accepts,
@@ -217,50 +217,50 @@ func TestDFARuntime(t *testing.T) {
 }
 
 func TestLexer(t *testing.T) {
-	lexer := Lexer{
+	lexer := lexer{
 		stringArray: strings.Split(`a|\(*`, ""),
 		index:       0,
 	}
 
-	var token Token
+	var token token
 
 	token = lexer.scan()
-	if token.kind != CHARACTER || token.value != "a" {
+	if token.kind != tokenCharactor || token.value != "a" {
 		t.Fatal("a")
 	}
 
 	token = lexer.scan()
-	if token.kind != OPE_UNION || token.value != "|" {
+	if token.kind != tokenOpeUnion || token.value != "|" {
 		t.Fatal("|")
 	}
 
 	token = lexer.scan()
-	if token.kind != CHARACTER || token.value != "(" {
+	if token.kind != tokenCharactor || token.value != "(" {
 		t.Fatal(`\(`)
 	}
 
 	token = lexer.scan()
-	if token.kind != OPE_STAR || token.value != "*" {
+	if token.kind != tokenOpeStar || token.value != "*" {
 		t.Fatal(`*`)
 	}
 
 	token = lexer.scan()
-	if token.kind != EOF || token.value != "" {
-		t.Fatal(`EOF`)
+	if token.kind != tokenEOF || token.value != "" {
+		t.Fatal(`tokenEOF`)
 	}
 
 	token = lexer.scan()
-	if token.kind != EOF || token.value != "" {
-		t.Fatal(`EOF`)
+	if token.kind != tokenEOF || token.value != "" {
+		t.Fatal(`tokenEOF`)
 	}
 }
 
 func TestCharacter(t *testing.T) {
 
-	c := Character{
+	c := character{
 		char: "a",
 	}
-	context := Context{}
+	context := context{}
 	f := c.assemble(&context)
 
 	sc := stateChar{
@@ -274,19 +274,19 @@ func TestCharacter(t *testing.T) {
 
 func TestConcat(t *testing.T) {
 
-	c1 := Character{
+	c1 := character{
 		char: "a",
 	}
-	c2 := Character{
+	c2 := character{
 		char: "b",
 	}
 
-	concat := Concat{
+	concat := concat{
 		operand1: c1,
 		operand2: c2,
 	}
 
-	context := Context{}
+	context := context{}
 	f := concat.assemble(&context)
 
 	sc1 := stateChar{
@@ -305,37 +305,37 @@ func TestConcat(t *testing.T) {
 	}
 
 	if !mapset.NewSet(2).Equal(f.stateCharMap[sc1]) {
-		t.Fatal(`Concat assemble`)
+		t.Fatal(`concat assemble`)
 	}
 
 	if !mapset.NewSet(4).Equal(f.stateCharMap[sc2]) {
-		t.Fatal(`Concat assemble`)
+		t.Fatal(`concat assemble`)
 	}
 
 	if !mapset.NewSet(3).Equal(f.stateCharMap[sc3]) {
-		t.Fatal(`Concat assemble`)
+		t.Fatal(`concat assemble`)
 	}
 
 	if !mapset.NewSet(4).Equal(f.accepts) {
-		t.Fatal(`Concat assemble`)
+		t.Fatal(`concat assemble`)
 	}
 }
 
 func TestUnion(t *testing.T) {
 
-	c1 := Character{
+	c1 := character{
 		char: "a",
 	}
-	c2 := Character{
+	c2 := character{
 		char: "b",
 	}
 
-	u := Union{
+	u := union{
 		operand1: c1,
 		operand2: c2,
 	}
 
-	context := Context{}
+	context := context{}
 	f := u.assemble(&context)
 
 	sc1 := stateChar{
@@ -354,19 +354,19 @@ func TestUnion(t *testing.T) {
 	}
 
 	if !mapset.NewSet(2).Equal(f.stateCharMap[sc1]) {
-		t.Fatal(`Union assemble`)
+		t.Fatal(`union assemble`)
 	}
 
 	if !mapset.NewSet(4).Equal(f.stateCharMap[sc2]) {
-		t.Fatal(`Union assemble`)
+		t.Fatal(`union assemble`)
 	}
 
 	if !mapset.NewSetFromSlice([]interface{}{1, 3}).Equal(f.stateCharMap[sc3]) {
-		t.Fatal(`Union assemble`)
+		t.Fatal(`union assemble`)
 	}
 
 	if !mapset.NewSetFromSlice([]interface{}{2, 4}).Equal(f.accepts) {
-		t.Fatal(`Union assemble`)
+		t.Fatal(`union assemble`)
 	}
 }
 

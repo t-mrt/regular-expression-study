@@ -7,13 +7,13 @@ import (
 	"github.com/deckarep/golang-set"
 )
 
-type NondeterministicFiniteAutomaton struct {
+type nondeterministicFiniteAutomaton struct {
 	transition func(state int, char string) mapset.Set
 	start      int
 	accepts    mapset.Set
 }
 
-func (nfa NondeterministicFiniteAutomaton) epsilonExpand(set mapset.Set) mapset.Set {
+func (nfa nondeterministicFiniteAutomaton) epsilonExpand(set mapset.Set) mapset.Set {
 
 	que := set.ToSlice()
 	done := mapset.NewSet()
@@ -38,7 +38,7 @@ func (nfa NondeterministicFiniteAutomaton) epsilonExpand(set mapset.Set) mapset.
 	return done
 }
 
-func nfa2dfa(nfa NondeterministicFiniteAutomaton) DeterministicFiniteAutomaton {
+func nfa2dfa(nfa nondeterministicFiniteAutomaton) deterministicFiniteAutomaton {
 	transition := func(set mapset.Set, alpha string) mapset.Set {
 		ret := mapset.NewSetFromSlice([]interface{}{})
 		it := set.Iterator()
@@ -50,76 +50,76 @@ func nfa2dfa(nfa NondeterministicFiniteAutomaton) DeterministicFiniteAutomaton {
 		return nfa.epsilonExpand(ret)
 	}
 
-	return DeterministicFiniteAutomaton{
+	return deterministicFiniteAutomaton{
 		transition: transition,
 		start:      nfa.epsilonExpand(mapset.NewSetFromSlice([]interface{}{nfa.start})),
 		accepts:    nfa.accepts,
 	}
 }
 
-type DeterministicFiniteAutomaton struct {
+type deterministicFiniteAutomaton struct {
 	transition func(state mapset.Set, char string) mapset.Set
 	start      mapset.Set
 	accepts    mapset.Set
 }
 
-type DFARuntime struct {
-	DFA          DeterministicFiniteAutomaton
+type dfaRuntime struct {
+	DFA          deterministicFiniteAutomaton
 	currentState mapset.Set
 }
 
-func (r *DFARuntime) doTransition(char string) {
+func (r *dfaRuntime) doTransition(char string) {
 	r.currentState = r.DFA.transition(r.currentState, char)
 }
 
-func (r DFARuntime) isAcceptState() bool {
+func (r dfaRuntime) isAcceptState() bool {
 	return r.currentState.Intersect(r.DFA.accepts).Cardinality() > 0
 }
 
-func (r DFARuntime) doesAccept(input string) bool {
+func (r dfaRuntime) doesAccept(input string) bool {
 	for _, rune := range input {
 		r.doTransition(string(rune))
 	}
 	return r.isAcceptState()
 }
 
-func (d DeterministicFiniteAutomaton) getRuntime() DFARuntime {
-	return DFARuntime{
+func (d deterministicFiniteAutomaton) getRuntime() dfaRuntime {
+	return dfaRuntime{
 		currentState: d.start,
 		DFA:          d,
 	}
 }
 
-type Token struct {
+type token struct {
 	value string
 	kind  int
 }
 
-type Lexer struct {
+type lexer struct {
 	stringArray []string
 	index       int
 }
 
 const (
-	CHARACTER = 0
-	OPE_UNION = 1
-	OPE_STAR  = 2
-	LPAREN    = 3
-	RPAREN    = 4
-	EOF       = 5
+	tokenCharactor  = 0
+	tokenOpeUnion   = 1
+	tokenOpeStar    = 2
+	tokenLeftparen  = 3
+	tokenRightParen = 4
+	tokenEOF        = 5
 )
 
-type Parser struct {
-	lexer Lexer
-	look  Token
+type parser struct {
+	lexer lexer
+	look  token
 }
 
-func (l *Lexer) scan() Token {
+func (l *lexer) scan() token {
 
 	if l.index == len(l.stringArray) {
-		return Token{
+		return token{
 			value: "",
-			kind:  EOF,
+			kind:  tokenEOF,
 		}
 	}
 
@@ -128,42 +128,42 @@ func (l *Lexer) scan() Token {
 
 	if ch == `\` {
 		l.index++
-		return Token{
+		return token{
 			value: l.stringArray[l.index-1],
-			kind:  CHARACTER,
+			kind:  tokenCharactor,
 		}
 	}
 	if ch == "|" {
-		return Token{
+		return token{
 			value: ch,
-			kind:  OPE_UNION,
+			kind:  tokenOpeUnion,
 		}
 	}
 	if ch == "(" {
-		return Token{
+		return token{
 			value: "(",
-			kind:  LPAREN,
+			kind:  tokenLeftparen,
 		}
 	}
 	if ch == ")" {
-		return Token{
+		return token{
 			value: ")",
-			kind:  RPAREN,
+			kind:  tokenRightParen,
 		}
 	}
 	if ch == "*" {
-		return Token{
+		return token{
 			value: ch,
-			kind:  OPE_STAR,
+			kind:  tokenOpeStar,
 		}
 	}
-	return Token{
+	return token{
 		value: ch,
-		kind:  CHARACTER,
+		kind:  tokenCharactor,
 	}
 }
 
-func (p *Parser) match(tag int) error {
+func (p *parser) match(tag int) error {
 	if p.look.kind != tag {
 		return errors.New("syntax error")
 	}
@@ -172,33 +172,33 @@ func (p *Parser) match(tag int) error {
 	return nil
 }
 
-func (p *Parser) move() {
+func (p *parser) move() {
 	p.look = p.lexer.scan()
 }
 
-func (p *Parser) factor() Node {
-	if p.look.kind == LPAREN {
+func (p *parser) factor() node {
+	if p.look.kind == tokenLeftparen {
 		// factor -> '(' subexpr ')'
-		p.match(LPAREN)
+		p.match(tokenLeftparen)
 		node := p.subexpr()
-		p.match(RPAREN)
+		p.match(tokenRightParen)
 		return node
 	} else {
-		// factor -> CHARACTER
-		node := Character{
+		// factor -> character
+		node := character{
 			char: p.look.value,
 		}
-		p.match(CHARACTER)
+		p.match(tokenCharactor)
 		return node
 	}
 }
 
-func (p *Parser) star() Node {
+func (p *parser) star() node {
 	// tar -> factor '*' | factor
 	node := p.factor()
-	if p.look.kind == OPE_STAR {
-		p.match(OPE_STAR)
-		node = Star{
+	if p.look.kind == tokenOpeStar {
+		p.match(tokenOpeStar)
+		node = star{
 			operand: node,
 		}
 	}
@@ -206,24 +206,24 @@ func (p *Parser) star() Node {
 	return node
 }
 
-func (p *Parser) seq() Node {
-	if p.look.kind == LPAREN || p.look.kind == CHARACTER {
+func (p *parser) seq() node {
+	if p.look.kind == tokenLeftparen || p.look.kind == tokenCharactor {
 		// seq -> subseq
 		return p.subseq()
 	} else {
 		// seq -> ''
-		return Character{
+		return character{
 			char: "",
 		}
 	}
 }
 
-func (p *Parser) subseq() Node {
+func (p *parser) subseq() node {
 	node1 := p.star()
-	if p.look.kind == LPAREN || p.look.kind == CHARACTER {
+	if p.look.kind == tokenLeftparen || p.look.kind == tokenCharactor {
 		// subseq -> star subseq
 		node2 := p.subseq()
-		node := Concat{
+		node := concat{
 			operand1: node1,
 			operand2: node2,
 		}
@@ -234,13 +234,13 @@ func (p *Parser) subseq() Node {
 	}
 }
 
-func (p *Parser) subexpr() Node {
+func (p *parser) subexpr() node {
 	// subexpr    -> seq '|' subexpr | seq
 	node := p.seq()
-	if p.look.kind == OPE_UNION {
-		p.match(OPE_UNION)
+	if p.look.kind == tokenOpeUnion {
+		p.match(tokenOpeUnion)
 		node2 := p.subexpr()
-		node = Union{
+		node = union{
 			operand1: node,
 			operand2: node2,
 		}
@@ -248,21 +248,21 @@ func (p *Parser) subexpr() Node {
 	return node
 }
 
-func (p *Parser) expression() NondeterministicFiniteAutomaton {
-	// expression -> subexpr EOF
+func (p *parser) expression() nondeterministicFiniteAutomaton {
+	// expression -> subexpr tokenEOF
 	node := p.subexpr()
-	p.match(EOF)
+	p.match(tokenEOF)
 
-	context := Context{}
+	context := context{}
 	fragment := node.assemble(&context)
 	return fragment.build()
 }
 
-type Context struct {
+type context struct {
 	stateCount int
 }
 
-func (c *Context) newState() int {
+func (c *context) newState() int {
 	c.stateCount = c.stateCount + 1
 	return c.stateCount
 }
@@ -272,13 +272,13 @@ type stateChar struct {
 	char  string
 }
 
-type NFAFragment struct {
+type nfaFragment struct {
 	start        int
 	accepts      mapset.Set
 	stateCharMap map[stateChar]mapset.Set // (状態, 入力文字) => 次の状態
 }
 
-func (f *NFAFragment) connect(from int, char string, to int) {
+func (f *nfaFragment) connect(from int, char string, to int) {
 	sc := stateChar{
 		state: from,
 		char:  char,
@@ -293,8 +293,8 @@ func (f *NFAFragment) connect(from int, char string, to int) {
 	}
 }
 
-func (f NFAFragment) newSkelton() NFAFragment {
-	newFragment := NFAFragment{
+func (f nfaFragment) newSkelton() nfaFragment {
+	newFragment := nfaFragment{
 		start:        0,
 		accepts:      mapset.NewSet(),
 		stateCharMap: map[stateChar]mapset.Set{},
@@ -305,7 +305,7 @@ func (f NFAFragment) newSkelton() NFAFragment {
 	return newFragment
 }
 
-func (f NFAFragment) or(frag NFAFragment) NFAFragment {
+func (f nfaFragment) or(frag nfaFragment) nfaFragment {
 	newFrag := f.newSkelton()
 
 	for k, v := range frag.stateCharMap {
@@ -315,7 +315,7 @@ func (f NFAFragment) or(frag NFAFragment) NFAFragment {
 	return newFrag
 }
 
-func (f NFAFragment) build() NondeterministicFiniteAutomaton {
+func (f nfaFragment) build() nondeterministicFiniteAutomaton {
 	scmap := f.stateCharMap
 
 	transition := func(state int, char string) mapset.Set {
@@ -331,23 +331,23 @@ func (f NFAFragment) build() NondeterministicFiniteAutomaton {
 		}
 	}
 
-	return NondeterministicFiniteAutomaton{
+	return nondeterministicFiniteAutomaton{
 		transition: transition,
 		start:      f.start,
 		accepts:    f.accepts,
 	}
 }
 
-type Node interface {
-	assemble(*Context) NFAFragment
+type node interface {
+	assemble(*context) nfaFragment
 }
 
-type Character struct {
+type character struct {
 	char string
 }
 
-func (c Character) assemble(context *Context) NFAFragment {
-	frag := NFAFragment{
+func (c character) assemble(context *context) nfaFragment {
+	frag := nfaFragment{
 		stateCharMap: map[stateChar]mapset.Set{},
 	}
 
@@ -364,12 +364,12 @@ func (c Character) assemble(context *Context) NFAFragment {
 	return frag
 }
 
-type Union struct {
-	operand1 Node
-	operand2 Node
+type union struct {
+	operand1 node
+	operand2 node
 }
 
-func (u Union) assemble(context *Context) NFAFragment {
+func (u union) assemble(context *context) nfaFragment {
 	frag1 := u.operand1.assemble(context)
 	frag2 := u.operand2.assemble(context)
 	frag := frag1.or(frag2)
@@ -384,11 +384,11 @@ func (u Union) assemble(context *Context) NFAFragment {
 	return frag
 }
 
-type Star struct {
-	operand Node
+type star struct {
+	operand node
 }
 
-func (s Star) assemble(context *Context) NFAFragment {
+func (s star) assemble(context *context) nfaFragment {
 	fragOrig := s.operand.assemble(context)
 	frag := fragOrig.newSkelton()
 
@@ -409,12 +409,12 @@ func (s Star) assemble(context *Context) NFAFragment {
 	return frag
 }
 
-type Concat struct {
-	operand1 Node
-	operand2 Node
+type concat struct {
+	operand1 node
+	operand2 node
 }
 
-func (c Concat) assemble(context *Context) NFAFragment {
+func (c concat) assemble(context *context) nfaFragment {
 
 	frag1 := c.operand1.assemble(context)
 	frag2 := c.operand2.assemble(context)
@@ -437,15 +437,15 @@ type Regexp interface {
 
 type regexp struct {
 	regexp string
-	dfa    DeterministicFiniteAutomaton
+	dfa    deterministicFiniteAutomaton
 }
 
 func (r *regexp) compile() {
-	lexer := Lexer{
+	lexer := lexer{
 		stringArray: strings.Split(r.regexp, ""),
 		index:       0,
 	}
-	parser := Parser{
+	parser := parser{
 		lexer: lexer,
 	}
 	parser.move()
